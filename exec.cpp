@@ -60,7 +60,7 @@ void Geng3::exec()
       double dl = (p.y - sumy)/6371008.8;
 
       //std::cout << "db dl : " << db << " " << dl << " " << " " << std::endl;
-      // std::cout << "CBL : " << center_pseudo_b_ << " " << center_pseudo_l_ << " " << " " << std::endl;
+      //std::cout << "CBL : " << center_pseudo_b_ << " " << center_pseudo_l_ << " " << " " << std::endl;
 
 
       p.b = center_pseudo_b_ + db;
