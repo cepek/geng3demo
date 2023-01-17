@@ -1,8 +1,11 @@
 #include "geng3.h"
+#include <gnu_gama/ellipsoid.h>
 
 #include <sstream>
 #include <vector>
 #include <set>
+#include <iomanip>
+
 
 void Geng3::exec()
 {
@@ -28,7 +31,45 @@ void Geng3::exec()
           continue;
         }
 
-      std::cout << p.x << " " << p.y << " " << p.type << std::endl;
+      points.push_back(p);
+
+      // for (auto p : points)
+      //   std::cout << p.x << " " << p.y << " " << p.type << std::endl;
+    }
+
+  if (points.size() == 0) return;
+
+  double sumx {0}, sumy {0};
+  for (const auto& p : points)
+    {
+      sumx += p.x; sumy += p.y;
+    }
+  sumx /= points.size();
+  sumy /= points.size();
+
+   // std::cout << "x y center " << sumx << " " << sumy << std::endl;
+
+  using namespace GNU_gama;
+  GNU_gama::Ellipsoid ellipsoid;
+  // ellipsoid.set_af1(6378137, 298.257223563); // WGS 84
+
+  for (auto& p : points)
+    {
+      // WGS 84  a = 6378137   b ~ 6356752.3   mean = (2a+b)/3 ~ 6371008.8
+      double db = (p.x - sumx)/6371008.8;   // mean Earth radius
+      double dl = (p.y - sumy)/6371008.8;
+
+      //std::cout << "db dl : " << db << " " << dl << " " << " " << std::endl;
+      // std::cout << "CBL : " << center_pseudo_b_ << " " << center_pseudo_l_ << " " << " " << std::endl;
+
+
+      p.b = center_pseudo_b_ + db;
+      p.l = center_pseudo_l_ + dl;
+      ellipsoid.blh2xyz(p.b,p.l,p.h, p.x,p.y,p.z);
+
+      std::cout << "BLH " <<p.b << " " << p.l << " " << p.h << std::endl;
+      std::cout << std::fixed << std::setprecision(4)
+          << "XYZ " << p.x << " " << p.y << " " << p.z << std::endl;
     }
 }
 

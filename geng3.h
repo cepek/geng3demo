@@ -68,8 +68,10 @@ private:
     double x{0}, y{0}, z{0};
     double b{0}, l{0}, h{0};
     Type   type {Type::free};
-    double dbx {0}, dbl {0};
+    double dbx {0}, dly {0};
   };
+
+  std::vector<Point> points;
 
   bool exec_check(const std::vector<std::string>& tokens, Point& p);
 };
