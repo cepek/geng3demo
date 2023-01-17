@@ -12,7 +12,7 @@ Geng3::Geng3()
 
 Geng3::~Geng3()
 {
-  if (inp != &std::cin ) delete inp;
+  //if (inp != &std::cin ) delete inp;
   if (out != &std::cout) delete out;
 }
 
