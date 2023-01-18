@@ -1,6 +1,8 @@
 #include "geng3.h"
 #include <gnu_gama/ellipsoid.h>
+#include <gnu_gama/gon2deg.h>
 
+#include <cmath>
 #include <sstream>
 #include <vector>
 #include <set>
@@ -56,20 +58,25 @@ void Geng3::exec()
   for (auto& p : points)
     {
       // WGS 84  a = 6378137   b ~ 6356752.3   mean = (2a+b)/3 ~ 6371008.8
-      double db = (p.x - sumx)/6371008.8;   // mean Earth radius
-      double dl = (p.y - sumy)/6371008.8;
+      double db = std::asin((p.x - sumx)/6371008.8);   // mean Earth radius
+      double dl = std::asin((p.y - sumy)/6371008.8);
 
       //std::cout << "db dl : " << db << " " << dl << " " << " " << std::endl;
-      //std::cout << "CBL : " << center_pseudo_b_ << " " << center_pseudo_l_ << " " << " " << std::endl;
+      std::cout << "CBL : " << center_pseudo_b_ << " " << center_pseudo_l_ << " " << " " << std::endl;
 
 
       p.b = center_pseudo_b_ + db;
       p.l = center_pseudo_l_ + dl;
       ellipsoid.blh2xyz(p.b,p.l,p.h, p.x,p.y,p.z);
 
-      std::cout << "BLH " <<p.b << " " << p.l << " " << p.h << std::endl;
+      std::cout << "BLH "
+                << "pseudo b l : " << center_pseudo_b_ << " " << center_pseudo_l_
+                << "   rad " << p.b << " " << p.l << " .... "
+                << GNU_gama::gon2deg(p.b/M_PI*200,3,6) << " "
+                << GNU_gama::gon2deg(p.l/M_PI*200,3,6) << " " << p.h << std::endl;
       std::cout << std::fixed << std::setprecision(4)
-          << "XYZ " << p.x << " " << p.y << " " << p.z << std::endl;
+                << "XYZ " << p.x << " " << p.y << " " << p.z << std::endl
+                << std::endl;
     }
 }
 
