@@ -17,6 +17,10 @@ std::string Geng3::demo_input()
 * B  800.000 1562.48 36.9  fix  #    coordinates n, e, u are fixed
 * C 2000     3000    60         # implicitly n, e, u are free
 
+
+</vectors>
+
+? not a point ### points and here
 )";
 
   return multistr;
