@@ -56,9 +56,9 @@ std::string Geng3::demo_input()
 # empty lines are ignored
 
 
-* A 1000.235 2000.65 50    fix  # poin A with x, y and height
-* B  800.000 1562.48 36.9  fix  #    coordinates n, e, u are fixed
-* C 2000     3000    60         # implicitly n, e, u are free
+* A 1000.235 2000.65 50    fix       # poin A with x, y and height
+* B  800.000 1562.48 36.9  fix  #    coordinates n, e are fixed, u free
+* C 2000     3000    60              # implicitly n, e, u are free
 
 
 # </vectors>
@@ -78,8 +78,52 @@ void Geng3::demo_data()
 
 // Exec ...................................................
 
+std::string Geng3::type2definition(int n)
+{
+  std::string t = "<UNKNOWN TYPE>";
+  switch(n)
+    {
+    case Type::free:
+      t = "<free><n/><e/><u/></free>"; break;
+    case Type::fix:
+      t = "<fix><n/><e/><u/></fix>"; break;
+    case Type::constr:
+      t = "<constr><n/><e/><u/></constr>"; break;
+    case Type::unused:
+      t = "<unused><n/><e/><u/></unused>"; break;
+    case Type::free_fix:
+      t = "<free><n/><e/></free>  <fix><u/></fix>"; break;
+    case Type::free_constr:
+      t = "<free><n/><e/></free>  <constr><u/></constr>"; break;
+    case Type::free_unused:
+      t = "<free><n/><e/></free> <unused><u/></unused>"; break;
+    case Type::fix_free:
+      t = "<fix><n/><e/></fix> <free><u/></free>"; break;
+    case Type:: fix_constr:
+      t = "<fix><n/><e/></fix> <constr><u/></constr>"; break;
+    case Type::fix_unused:
+      t = "<fix><n/><e/></fix> <unused><u/></unused>"; break;
+    case Type::constr_free:
+      t = "<constr><n/<u/</constr> <free><u/></free>"; break;
+    case Type::constr_fix:
+      t = "<constr><n/<u/</constr> <fix><u/></fix>"; break;
+    case Type::constr_unused:
+      t = "<constr><n/<u/</> <free><u/></unused>"; break;
+    case Type::unused_free:
+      t = "<unused><n/><e/></unused> <free><e></free>"; break;
+    case Type::unused_fix:
+      t = "<unused><n/><e/></unused> <fix><e/></fix>"; break;
+    case Type::unused_constr:
+      t = "<unused><n/><e/></unused> <constr><e></constr>"; break;
+    }
+
+  return t;
+  };
+
 void Geng3::exec()
 {
+  *out << xml_start();
+
   const std::set<std::string> obs_blocks {"<vectors>"};
 
   std::string line;
@@ -95,7 +139,6 @@ void Geng3::exec()
       if (!line.empty()) lines.push_back(line);
   }
 
-
   // *** points section
   while (!lines.empty())
     {
@@ -106,13 +149,14 @@ void Geng3::exec()
       std::string word;
       while (data >> word) tokens.push_back(word);
 
+      // first observation block ends the points section
       if (obs_blocks.find(tokens[0]) != obs_blocks.cend()) break;
 
       lines.pop_front();
-      std::cout << line << std::endl;
+      // std::cout << line << std::endl;
 
       Point p;
-      if (!exec_check(tokens, p)) {
+      if (!exec_point_check(tokens, p)) {
           std::cerr << "!    ignored data: " << line << std::endl;
           std::cerr.flush();
           continue;
@@ -127,8 +171,9 @@ void Geng3::exec()
   if (points.size() == 0) return;
 
 
-  std::cout << "// observations section" <<std::endl;
-  while (!lines.empty())
+  // observations section" <<std::endl;
+
+  if (0) while (!lines.empty())
     {
       line = lines.front();
       lines.pop_front();
@@ -136,6 +181,7 @@ void Geng3::exec()
     }
 
 
+  // set XML points type
 
   double sumx {0}, sumy {0};
   for (const auto& p : points)
@@ -150,6 +196,9 @@ void Geng3::exec()
   using namespace GNU_gama;
   GNU_gama::Ellipsoid ellipsoid;
   // ellipsoid.set_af1(6378137, 298.257223563); // WGS 84
+
+  bool first_point = true;
+  auto previous_point_type = Type::free;
 
   for (auto& p : points)
     {
@@ -166,6 +215,19 @@ void Geng3::exec()
       p.l = center_pseudo_l_ + dl;
       ellipsoid.blh2xyz(p.b,p.l,p.h, p.x,p.y,p.z);
 
+      if (first_point || previous_point_type != p.type)
+        {
+
+          *out << "\n" << type2definition(p.type) << std::endl;
+          previous_point_type = p.type;
+        }
+      first_point = false;
+
+      *out << std::fixed
+           << "<point> <id>" << p.id << "</id> "
+           << "<x>" << p.x << "> y=<" << p.y << "> <z>" << p.z << "</z>'n"
+           << "</point>\n";
+
 #if 0
       std::cout << "BLH "
                 << "pseudo b l : " << center_pseudo_b_ << " " << center_pseudo_l_
@@ -179,10 +241,12 @@ void Geng3::exec()
 #endif
 
     }
+
+  *out << xml_end();
 }
 
 
-bool Geng3::exec_check(const std::vector<std::string>& tokens, Point& p)
+bool Geng3::exec_point_check(const std::vector<std::string>& tokens, Point& p)
 {
   bool test = true;
 
@@ -199,7 +263,7 @@ bool Geng3::exec_check(const std::vector<std::string>& tokens, Point& p)
      test = false;
     }
 
-  std::string id = tokens[1];
+  p.id = tokens[1];
 
   auto sx = tokens[2];
   std::istringstream isx(sx);
@@ -245,21 +309,13 @@ bool Geng3::exec_check(const std::vector<std::string>& tokens, Point& p)
       test = false;
   }
 
-  if (tokens.size() == 5)
-    {
-      p.type = Type::free;
-    }
-  else
-    {
-      const std::string t = tokens[5];
-      auto ptr = str2type.find(t);
-      if (ptr != str2type.cend())
-        {
-          p.type = ptr->second;
-        }
-      else
-        {
-          std::cerr << "! undefined point type '" << t << "'\n";
+  p.type = Type::free;
+  if (tokens.size() == 6) {
+      auto type_ptr = str2type.find(tokens[5]);
+      if (type_ptr != str2type.end()) {
+          p.type = type_ptr->second;
+        } else {
+          std::cerr << "! unknown coordinate type '" << tokens[5] << "'\n";
           test = false;
         }
     }
@@ -267,3 +323,41 @@ bool Geng3::exec_check(const std::vector<std::string>& tokens, Point& p)
   return test;
 }
 
+// XML output .............................................
+
+std::string Geng3::xml_start()
+{
+  std::string xmlstart = R"xml_start(<?xml version="1.0" ?>
+
+<gnu-gama-data xmlns="http://www.gnu.org/software/gama/gnu-gama-data">
+
+<text>
+Geng3 generated testing file
+</text>
+
+<g3-model>
+
+  <constants>
+     <apriori-standard-deviation>10</apriori-standard-deviation>
+     <confidence-level>0.95</confidence-level>
+     <!-- angular-units-degrees/ -->
+     <angular-units-gons/>
+
+     <ellipsoid>
+        <id>wgs84</id>
+        <!-- a>6378137</a -->
+        <!-- b>6356752.31425</b -->
+        <!-- inv-f>298.257223563</inv-f -->
+     </ellipsoid>
+  </constants>
+)xml_start";
+
+  return xmlstart;
+}
+
+std::string Geng3::xml_end()
+{
+
+  return "\n</g3-model>\n"
+         "</gnu-gama-data>\n";
+}
