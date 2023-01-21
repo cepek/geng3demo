@@ -61,9 +61,8 @@ std::string Geng3::demo_input()
 * C 2000     3000    60              # implicitly n, e, u are free
 
 
-# </vectors>
-#
-#? not a point ### points and here
+<vector> A C
+<vector> B C
 
 )";
 
@@ -86,33 +85,33 @@ std::string Geng3::type2definition(int n)
     case Type::free:
       t = "<free><n/><e/><u/></free>"; break;
     case Type::fix:
-      t = "<fix><n/><e/><u/></fix>"; break;
+      t = "<fixed><n/><e/><u/></fixed>"; break;
     case Type::constr:
       t = "<constr><n/><e/><u/></constr>"; break;
     case Type::unused:
       t = "<unused><n/><e/><u/></unused>"; break;
     case Type::free_fix:
-      t = "<free><n/><e/></free>  <fix><u/></fix>"; break;
+      t = "<free><n/><e/></free>  <fixed><u/></fixed>"; break;
     case Type::free_constr:
       t = "<free><n/><e/></free>  <constr><u/></constr>"; break;
     case Type::free_unused:
       t = "<free><n/><e/></free> <unused><u/></unused>"; break;
     case Type::fix_free:
-      t = "<fix><n/><e/></fix> <free><u/></free>"; break;
+      t = "<fixed><n/><e/></fixed> <free><u/></free>"; break;
     case Type:: fix_constr:
-      t = "<fix><n/><e/></fix> <constr><u/></constr>"; break;
+      t = "<fixed><n/><e/></fixed> <constr><u/></constr>"; break;
     case Type::fix_unused:
-      t = "<fix><n/><e/></fix> <unused><u/></unused>"; break;
+      t = "<fixed><n/><e/></fixed> <unused><u/></unused>"; break;
     case Type::constr_free:
       t = "<constr><n/<u/</constr> <free><u/></free>"; break;
     case Type::constr_fix:
-      t = "<constr><n/<u/</constr> <fix><u/></fix>"; break;
+      t = "<constr><n/<u/</constr> <fixed><u/></fixed>"; break;
     case Type::constr_unused:
       t = "<constr><n/<u/</> <free><u/></unused>"; break;
     case Type::unused_free:
       t = "<unused><n/><e/></unused> <free><e></free>"; break;
     case Type::unused_fix:
-      t = "<unused><n/><e/></unused> <fix><e/></fix>"; break;
+      t = "<unused><n/><e/></unused> <fixed><e/></fixed>"; break;
     case Type::unused_constr:
       t = "<unused><n/><e/></unused> <constr><e></constr>"; break;
     }
@@ -124,7 +123,7 @@ void Geng3::exec()
 {
   *out << xml_start();
 
-  const std::set<std::string> obs_blocks {"<vectors>"};
+  const std::set<std::string> observation_types {"<vector>"};
 
   std::string line;
   std::deque<std::string> lines;
@@ -150,7 +149,7 @@ void Geng3::exec()
       while (data >> word) tokens.push_back(word);
 
       // first observation block ends the points section
-      if (obs_blocks.find(tokens[0]) != obs_blocks.cend()) break;
+      if (observation_types.find(tokens[0]) != observation_types.cend()) break;
 
       lines.pop_front();
       // std::cout << line << std::endl;
@@ -169,16 +168,6 @@ void Geng3::exec()
     }
 
   if (points.size() == 0) return;
-
-
-  // observations section" <<std::endl;
-
-  if (0) while (!lines.empty())
-    {
-      line = lines.front();
-      lines.pop_front();
-      std::cout << line << std::endl;
-    }
 
 
   // set XML points type
@@ -223,9 +212,9 @@ void Geng3::exec()
         }
       first_point = false;
 
-      *out << std::fixed
+      *out << std::fixed << std::setprecision(3)
            << "<point> <id>" << p.id << "</id> "
-           << "<x>" << p.x << "> y=<" << p.y << "> <z>" << p.z << "</z>'n"
+           << "<x>" << p.x << "</x> <y>" << p.y << "</y> <z>" << p.z << "</z>\n"
            << "</point>\n";
 
 #if 0
@@ -240,6 +229,28 @@ void Geng3::exec()
                 << std::endl;
 #endif
 
+    }
+  *out << "\n";
+
+  // observations
+
+
+  while (!lines.empty())
+    {
+      auto obs = lines.front();
+      lines.pop_front();
+
+      std::vector<std::string> tokens;
+      std::istringstream istr(obs);
+      std::string token;
+      while (istr >> token) tokens.push_back(token);
+
+      bool test = false;
+      if (tokens[0] == "<vector>") test = check_vector(tokens);
+
+      if (!test) *out << "! Unknown observation: " << obs << "\n";
+
+      // *out << obs << std::endl;
     }
 
   *out << xml_end();
@@ -321,6 +332,38 @@ bool Geng3::exec_point_check(const std::vector<std::string>& tokens, Point& p)
     }
 
   return test;
+}
+
+bool Geng3::check_vector(const std::vector<std::string>& tokens)
+{
+  if (tokens.size() != 3) return false;
+  if (tokens[0] != "<vector>") return false;
+
+  Point a, b;
+  for (const auto& point : points)
+    {
+      if (point.id == tokens[1]) a = point;
+      if (point.id == tokens[2]) b = point;
+    }
+
+  if (a.id.empty() || b.id.empty()) return false;
+  if (a.id == b.id) return false;
+
+  double dx = b.x - a.x;
+  double dy = b.y - a.y;
+  double dz = b.z - a.z;
+
+  *out << "\n<obs>\n<vector>\n"
+       << "<from>" << a.id << "</from> <to>" << b.id << "</to>\n"
+       << "<dx>" << dx << "</dx> <dy>" << dy << "</dy> <dz>" << dz << "</dz>\n"
+       << "</vector>\n"
+       << "<cov-mat> <dim>3</dim> <band>0</band>\n"
+       << "<flt>0.6</flt>  <flt>0.4</flt>  <flt>0.7</flt>\n"
+       << "</cov-mat>\n"
+       << "</obs>\n";
+
+
+  return true;
 }
 
 // XML output .............................................

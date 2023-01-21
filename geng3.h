@@ -1,6 +1,7 @@
 #ifndef GENG3_H
 #define GENG3_H
 
+#include <algorithm>
 #include <cmath>
 #include <utility>
 #include <iostream>
@@ -84,12 +85,14 @@ private:
     double x{0}, y{0}, z{0};
     double b{0}, l{0}, h{0};
     Type   type {Type::free};
-    double dbx {0}, dly {0};
+    // double dbx {0}, dly {0};
   };
 
   std::vector<Point> points;
 
   bool exec_point_check(const std::vector<std::string>& tokens, Point& p);
+
+  bool check_vector(const std::vector<std::string>& tokens);
 
   std::string xml_start();
   std::string xml_end();
