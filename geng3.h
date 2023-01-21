@@ -1,10 +1,18 @@
 #ifndef GENG3_H
 #define GENG3_H
 
+#include <cmath>
+#include <sstream>
 #include <iostream>
 #include <vector>
+#include <iomanip>
 #include <string>
+#include <deque>
+#include <set>
 #include <unordered_map>
+
+#include <gnu_gama/ellipsoid.h>
+#include <gnu_gama/gon2deg.h>
 
 class Geng3
 {
@@ -44,7 +52,6 @@ private:
 
   const std::unordered_map<std::string,Type> str2type
   {
-
     { "free",          Type::free },
     { "fix",           Type::fix },
     { "constr",        Type::constr },
