@@ -92,7 +92,9 @@ private:
 
   bool exec_point_check(const std::vector<std::string>& tokens, Point& p);
 
-  bool check_vector(const std::vector<std::string>& tokens);
+  bool check_vector  (const std::vector<std::string>& tokens);
+  bool check_distance(const std::vector<std::string>& tokens);
+  bool check_xyz     (const std::vector<std::string>& tokens);
 
   std::string xml_start();
   std::string xml_end();

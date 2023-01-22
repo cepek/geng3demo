@@ -51,18 +51,41 @@ std::string Geng3::demo_input()
 {
   std::string multistr = R"(
 
-# input data are read by lines
-# anything from character '#' is comments and is ignored
-# empty lines are ignored
+# Geng3 reads GNU Gama 3D scatch definition from standard input
+# and writes generated XML file to the standard output.
 
+# Input data are read by lines
+# anything from character '#' is a comment and is ignored
+# empty lines are ignored.
 
-* A 1000.235 2000.65 50    fix       # poin A with x, y and height
-* B  800.000 1562.48 36.9  fix  #    coordinates n, e are fixed, u free
+# Points section
+# --------------
+
+* A 1000.235 2000.65 50    fix       # poin A with x, y and height (neu fixed)
+* B  800.000 1562.48 36.9  fix_free  # coordinates n, e are fixed, u is free
 * C 2000     3000    60              # implicitly n, e, u are free
 
+# Points defined in this section defines only a rough scatch of a 3D network.
+# For each point we define local xy corrdinates and an ellipsoidal height.
+# From xy coordinates the center point is calculated and differences
+# dx and dy. The 2D plane distances dx and dy are transformat to radians
+# db = asin(dx/6371008.8), dl = asin(dy/6371008.8). Radian differences
+# are added to the given ellipsoidal center point (45 and 90 degrees)
+# leading to pseudo ellipsoidal coordintes BLH. These are transformed
+# to the carthesian space coordinas XYZ and are used for generated XML input
+# data for gama-g3.
+
+# Observations in the generated XML are calculated from the given
+# coordinates thus adjusted corrections must be zero (if we avoid
+# rounding errors and set the output precision to 16 digits).
+
+# Observations section
+# --------------------
 
 <vector> A C
 <vector> B C
+<distance> B C   # space distance
+<xyz> C          # point coordinate XYZ with the given covatiance matrix
 
 )";
 
@@ -123,7 +146,10 @@ void Geng3::exec()
 {
   *out << xml_start();
 
-  const std::set<std::string> observation_types {"<vector>"};
+  const std::set<std::string> observation_types
+  {
+    "<vector>", "<distance>", "<xyz>"
+  };
 
   std::string line;
   std::deque<std::string> lines;
@@ -212,7 +238,7 @@ void Geng3::exec()
         }
       first_point = false;
 
-      *out << std::fixed << std::setprecision(3)
+      *out << std::fixed << std::setprecision(16) // 3)
            << "<point> <id>" << p.id << "</id> "
            << "<x>" << p.x << "</x> <y>" << p.y << "</y> <z>" << p.z << "</z>\n"
            << "</point>\n";
@@ -232,8 +258,8 @@ void Geng3::exec()
     }
   *out << "\n";
 
-  // observations
 
+  // observations
 
   while (!lines.empty())
     {
@@ -246,7 +272,9 @@ void Geng3::exec()
       while (istr >> token) tokens.push_back(token);
 
       bool test = false;
-      if (tokens[0] == "<vector>") test = check_vector(tokens);
+      if      (tokens[0] == "<vector>")   test = check_vector(tokens);
+      else if (tokens[0] == "<distance>") test = check_distance(tokens);
+      else if (tokens[0] == "<xyz>")      test = check_xyz(tokens);
 
       if (!test) *out << "! Unknown observation: " << obs << "\n";
 
@@ -365,6 +393,82 @@ bool Geng3::check_vector(const std::vector<std::string>& tokens)
 
   return true;
 }
+
+bool Geng3::check_distance(const std::vector<std::string>& tokens)
+{
+  if (tokens.size() != 3) return false;
+  if (tokens[0] != "<distance>") return false;
+
+  Point a, b;
+  for (const auto& point : points)
+    {
+      if (point.id == tokens[1]) a = point;
+      if (point.id == tokens[2]) b = point;
+    }
+
+  if (a.id.empty() || b.id.empty()) return false;
+  if (a.id == b.id) return false;
+
+  double dx = b.x - a.x;
+  double dy = b.y - a.y;
+  double dz = b.z - a.z;
+  double val = std::sqrt(dx*dx + dy*dy + dz*dz);
+
+  *out << "\n<obs>\n<distance>\n"
+       << "<from>" << a.id << "</from> <to>" << b.id << "</to>\n"
+       << "<val>" << val << "</val>\n"
+       << "<stdev>15</stdev>\n"
+       << "<from-dh>0</from-dh> <to-dh>0</to-dh>"
+       << "</distance>\n"
+       << "</obs>\n";
+
+  /*
+       << "<cov-mat> <dim>1</dim> <band>0</band>\n"
+       << "<flt>0.8</flt>\n"
+       << "</cov-mat>\n"
+
+  */
+
+  // or <stdev>15</stdev>
+
+  return true;
+}
+
+
+bool Geng3::check_xyz(const std::vector<std::string>& tokens)
+{
+  if (tokens.size() != 2) return false;
+  if (tokens[0] != "<xyz>") return false;
+
+  Point p;
+  for (const auto& point : points)
+    {
+      if (point.id == tokens[1]) p = point;
+    }
+
+  if (p.id.empty()) return false;
+
+  *out << "\n<obs>\n<xyz>\n"
+       << "<id>" << p.id << "</id> "
+       << "<x>" << p.x << "</x> <y>" << p.y << "</y> <z>" << p.z << "</z>\n"
+       << "</xyz>\n"
+       << "<cov-mat> <dim>3</dim> <band>2</band>\n"
+       << "<flt>0.31</flt> <flt>0.10</flt> <flt>0.04</flt>\n"
+       << "<flt>0.35</flt> <flt>0.13</flt>\n"
+       << "<flt>0.36</flt>\n"
+       << "</cov-mat>\n"
+       << "</obs>\n";
+
+  /*
+
+
+  */
+
+  // or <stdev>15</stdev>
+
+  return true;
+}
+
 
 // XML output .............................................
 
