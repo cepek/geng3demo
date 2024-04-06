@@ -37,6 +37,20 @@ bool Geng3::help(int argc, char* argv[])
       if (dset.find(argv[n-1]) != dset.cend()) demo_data_ = true;
     }
 
+  if (bhelp)
+    {
+      std::cerr << "\n"
+        "Usage: geng3demo < scatch definition file > gama-g3 input XML file\n"
+        "       geng3demo -d > output XML file   "
+        "# use internal scatch input data\n"
+        "       geng3demo -h                     # help\n\n\n"
+        ;
+
+      std::cerr << "Example of the scatch definition file:";
+      std::cerr << demo_input();
+      return bhelp;
+    }
+
   if (demo_data_)
     {
       demo_data();
