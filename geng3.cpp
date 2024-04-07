@@ -40,13 +40,13 @@ bool Geng3::help(int argc, char* argv[])
   if (bhelp)
     {
       std::cerr << "\n"
-        "Usage: geng3demo < scatch definition file > gama-g3 input XML file\n"
-        "       geng3demo -d > output XML file   "
-        "# use internal scatch input data\n"
-        "       geng3demo -h                     # help\n\n\n"
+        "Usage: geng3 < points' layout definition file > gama-g3 input XML file\n\n"
+        "       geng3 -d > output XML file   "
+        "# use internal points' layout input data\n\n"
+        "       geng3 -h                     # help\n\n\n"
         ;
 
-      std::cerr << "Example of the scatch definition file:";
+      std::cerr << "Example of the points' layout definition file:";
       std::cerr << demo_input();
       return bhelp;
     }
@@ -65,7 +65,7 @@ std::string Geng3::demo_input()
 {
   std::string multistr = R"(
 
-# Geng3 reads GNU Gama 3D scatch definition from standard input
+# Geng3 reads GNU Gama 3D points' layout from standard input
 # and writes generated XML file to the standard output.
 
 # Input data are read by lines
@@ -79,15 +79,16 @@ std::string Geng3::demo_input()
 * B  800.000 1562.48 36.9  fix_free  # coordinates n, e are fixed, u is free
 * C 2000     3000    60              # implicitly n, e, u are free
 
-# Points defined in this section defines only a rough scatch of a 3D network.
-# For each point we define local xy corrdinates and an ellipsoidal height.
-# From xy coordinates the center point is calculated and differences
-# dx and dy. The 2D plane distances dx and dy are transformat to radians
-# db = asin(dx/6371008.8), dl = asin(dy/6371008.8). Radian differences
-# are added to the given ellipsoidal center point (45 and 90 degrees)
-# leading to pseudo ellipsoidal coordintes BLH. These are transformed
-# to the carthesian space coordinas XYZ and are used for generated XML input
-# data for gama-g3.
+# Points defined in this section define only a rough points' layout
+# of a 3D network.  For each point we define local xy coordinates and
+# an ellipsoidal height.  From xy coordinates the center point is
+# calculated and differences dx and dy. The 2D plane distances dx and
+# dy are transformat to radians db = asin(dx/6371008.8), dl =
+# asin(dy/6371008.8). Radian differences are added to the given
+# ellipsoidal center point (45 and 90 degrees) leading to pseudo
+# ellipsoidal coordintes BLH. These are transformed to the carthesian
+# space coordinas XYZ and are used for generated XML input data for
+# gama-g3.
 
 # Observations in the generated XML are calculated from the given
 # coordinates thus adjusted corrections must be zero (if we avoid
